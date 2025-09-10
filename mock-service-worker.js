@@ -1,3 +1,18 @@
+// ===================================================================
+// АГРЕССИВНАЯ АКТИВАЦИЯ ВОРКЕРА
+// ===================================================================
+self.addEventListener('install', (event) => {
+  console.log('[MSW] Service Worker installed, skipping waiting...');
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('[MSW] Service Worker activated, claiming clients...');
+  event.waitUntil(self.clients.claim());
+});
+// ===================================================================
+
+
 // ================= НАЧАЛО ЗАГЛУШКИ LOCALSTORAGE =================
 const mockLocalStorage = (() => {
   let store = {};
@@ -16,9 +31,7 @@ self.localStorage = mockLocalStorage;
 importScripts('/msw.js');
 
 // 2. Получаем доступ к API MSW из правильного глобального объекта
-// ======================= ВОТ ИСПРАВЛЕНИЕ =======================
 const { setupWorker, http, HttpResponse } = MockServiceWorker;
-// ===============================================================
 
 // 3. Определяем "ручки" (хендлеры) для наших API-запросов.
 const handlers = [
@@ -44,6 +57,12 @@ const handlers = [
             success: true,
             payload: { availableTranslations: ["en", "ru"], forceDemoAvailable: true }
         });
+    }),
+
+    // Дополнительный хендлер для запроса переводов, который мы видим в логе
+    http.get('/api/translates/:id/latest/en', () => {
+        console.log('[MSW] Intercepted GET /api/translates');
+        return HttpResponse.json({ "COMMON.PLEASE_LOGIN": "PLEASE LOGIN" }); // Возвращаем хоть что-то
     }),
 
     // Запрос на восстановление игры
