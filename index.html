@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" translate="no">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="google" content="notranslate" />
+	<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+	<title>Game</title>
+	<style>
+	body {
+		background: #000000;
+	}
+	</style>
+</head>
+
+<body translate="no">
+	<div id="app"></div>
+	<div id="modal"></div>
+
+	<!-- ================== НАЧАЛО БЛОКА MSW ================== -->
+	<script>
+	  // Регистрируем наш Service Worker
+	  if ('serviceWorker' in navigator) {
+	    navigator.serviceWorker.register('/mock-service-worker.js')
+	      .then(function(registration) {
+	        console.log('[MSW] Service Worker registration successful with scope: ', registration.scope);
+	      })
+	      .catch(function(err) {
+	        console.error('[MSW] Service Worker registration failed: ', err);
+	      });
+	  }
+	</script>
+	<!-- =================== КОНЕЦ БЛОКА MSW =================== -->
+
+	<!-- Оригинальный скрипт игры -->
+	<script defer="defer" src="index.9480c28da0a805029a18.js"></script>
+
+	<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"97bf2a8e5d11049b","serverTiming":{"name":{"cfExtPri":true,"cfEdge":true,"cfOrigin":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2025.8.0","token":"41feb1167b0f4c17ac2ed675e7c289cd"}' crossorigin="anonymous"></script>
+</body>
+
+</html>
