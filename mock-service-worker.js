@@ -45,7 +45,7 @@ const handlers = [
     }),
     http.get('/api/translates/:id/latest/en', () => {
         console.log('[MSW] Intercepted GET /api/translates');
-        return HttpResponse.json({ "COMMON.PLEASE_LOGIN": "PLEASE LOGIN" });
+        return HttpResponse.json({ "COMMON.PLEASE_LOGIN": "PLEASE LOGIN" }); // Возвращаем хоть что-то
     }),
     http.post('/api/games/retrieve', () => {
         console.log('[MSW] Intercepted POST /api/games/retrieve');
