@@ -1,4 +1,23 @@
-// ШАГ 1: Агрессивная активация, чтобы воркер начал работать немедленно.
+// ===================================================================
+// ЗАГЛУШКА LOCALSTORAGE ДЛЯ SERVICE WORKER
+// Это нужно, потому что MSW пытается получить доступ к localStorage,
+// а у воркеров его нет, что вызывает падение скрипта.
+// Этот код создает фейковый localStorage в памяти.
+// ===================================================================
+const mockLocalStorage = (() => {
+  let store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => (store[key] = value.toString()),
+    removeItem: (key) => delete store[key],
+    clear: () => (store = {}),
+  };
+})();
+self.localStorage = mockLocalStorage;
+// ===================================================================
+
+
+// Агрессивная активация, чтобы воркер начал работать немедленно.
 self.addEventListener('install', (event) => {
   console.log('[MSW] Service Worker: install');
   self.skipWaiting();
@@ -9,14 +28,13 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// ШАГ 2: Импортируем библиотеку MSW.
-// Она создает глобальный объект "MockServiceWorker".
+// Импортируем библиотеку MSW.
 importScripts('/msw.js');
 
-// ШАГ 3: Получаем нужные нам инструменты из библиотеки.
+// Получаем нужные нам инструменты из библиотеки.
 const { handleRequest, http, HttpResponse } = MockServiceWorker;
 
-// ШАГ 4: Определяем наши фейковые ответы (хендлеры).
+// Определяем наши фейковые ответы (хендлеры).
 const handlers = [
     http.post('/api/common/profile', () => {
         console.log('[MSW] Intercepted POST /api/common/profile');
@@ -38,14 +56,13 @@ const handlers = [
             payload: { availableTranslations: ["en", "ru"], forceDemoAvailable: true }
         });
     }),
-    // Дополнительные хендлеры для запросов, которые мы видели в логах
     http.get('/api/games/settings', () => {
         console.log('[MSW] Intercepted GET /api/games/settings');
         return HttpResponse.json({ success: true, payload: {} });
     }),
     http.get('/api/translates/:id/latest/en', () => {
         console.log('[MSW] Intercepted GET /api/translates');
-        return HttpResponse.json({ "COMMON.PLEASE_LOGIN": "PLEASE LOGIN" }); // Возвращаем хоть что-то
+        return HttpResponse.json({ "COMMON.PLEASE_LOGIN": "PLEASE LOGIN" });
     }),
     http.post('/api/games/retrieve', () => {
         console.log('[MSW] Intercepted POST /api/games/retrieve');
@@ -75,17 +92,13 @@ const handlers = [
     })
 ];
 
-// ШАГ 5: Это главный обработчик. Он будет срабатывать на КАЖДЫЙ сетевой запрос.
+// Главный обработчик. Он будет срабатывать на КАЖДЫЙ сетевой запрос.
 self.addEventListener('fetch', (event) => {
-  // Мы просим MSW обработать запрос, используя наши хендлеры.
-  // Если ни один хендлер не подойдет, запрос пройдет в реальную сеть (onUnhandledRequest: 'bypass').
   event.respondWith(
     handleRequest(
       event,
       handlers,
-      {
-        onUnhandledRequest: 'bypass',
-      }
+      { onUnhandledRequest: 'bypass' }
     )
   );
 });
