@@ -1,41 +1,23 @@
-// ===================================================================
-// АГРЕССИВНАЯ АКТИВАЦИЯ ВОРКЕРА
-// ===================================================================
+// ШАГ 1: Агрессивная активация, чтобы воркер начал работать немедленно.
 self.addEventListener('install', (event) => {
-  console.log('[MSW] Service Worker installed, skipping waiting...');
+  console.log('[MSW] Service Worker: install');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[MSW] Service Worker activated, claiming clients...');
+  console.log('[MSW] Service Worker: activate');
   event.waitUntil(self.clients.claim());
 });
-// ===================================================================
 
-
-// ================= НАЧАЛО ЗАГЛУШКИ LOCALSTORAGE =================
-const mockLocalStorage = (() => {
-  let store = {};
-  return {
-    getItem: (key) => store[key] || null,
-    setItem: (key, value) => (store[key] = value.toString()),
-    removeItem: (key) => delete store[key],
-    clear: () => (store = {}),
-  };
-})();
-self.localStorage = mockLocalStorage;
-// ================= КОНЕЦ ЗАГЛУШКИ LOCALSTORAGE =================
-
-
-// 1. Импортируем библиотеку MSW
+// ШАГ 2: Импортируем библиотеку MSW.
+// Она создает глобальный объект "MockServiceWorker".
 importScripts('/msw.js');
 
-// 2. Получаем доступ к API MSW из правильного глобального объекта
-const { setupWorker, http, HttpResponse } = MockServiceWorker;
+// ШАГ 3: Получаем нужные нам инструменты из библиотеки.
+const { handleRequest, http, HttpResponse } = MockServiceWorker;
 
-// 3. Определяем "ручки" (хендлеры) для наших API-запросов.
+// ШАГ 4: Определяем наши фейковые ответы (хендлеры).
 const handlers = [
-    // Запрос профиля
     http.post('/api/common/profile', () => {
         console.log('[MSW] Intercepted POST /api/common/profile');
         return HttpResponse.json({
@@ -49,8 +31,6 @@ const handlers = [
             }
         });
     }),
-
-    // Запрос настроек
     http.get('/api/common/settings', () => {
         console.log('[MSW] Intercepted GET /api/common/settings');
         return HttpResponse.json({
@@ -58,20 +38,19 @@ const handlers = [
             payload: { availableTranslations: ["en", "ru"], forceDemoAvailable: true }
         });
     }),
-
-    // Дополнительный хендлер для запроса переводов, который мы видим в логе
+    // Дополнительные хендлеры для запросов, которые мы видели в логах
+    http.get('/api/games/settings', () => {
+        console.log('[MSW] Intercepted GET /api/games/settings');
+        return HttpResponse.json({ success: true, payload: {} });
+    }),
     http.get('/api/translates/:id/latest/en', () => {
         console.log('[MSW] Intercepted GET /api/translates');
-        return HttpResponse.json({ "COMMON.PLEASE_LOGIN": "PLEASE LOGIN" }); // Возвращаем хоть что-то
+        return HttpResponse.json({ "COMMON.PLEASE_LOGIN": "PLEASE LOGIN" });
     }),
-
-    // Запрос на восстановление игры
     http.post('/api/games/retrieve', () => {
         console.log('[MSW] Intercepted POST /api/games/retrieve');
         return HttpResponse.json({ success: false, error: 'No active games' }, { status: 404 });
     }),
-
-    // Запрос на создание новой игры
     http.post('/api/games/create', () => {
         console.log('[MSW] Intercepted POST /api/games/create');
         return HttpResponse.json({
@@ -79,8 +58,6 @@ const handlers = [
             payload: { id: `round-${new Date().getTime()}`, state: 'created', salt: 'fake-salt' }
         });
     }),
-
-    // Запрос на совершение ставки
     http.post('/api/bets/place', async ({ request }) => {
         console.log('[MSW] Intercepted POST /api/bets/place');
         const body = await request.json();
@@ -92,14 +69,23 @@ const handlers = [
         await new Promise(res => setTimeout(res, 1000));
         return HttpResponse.json({ success: true, payload: { id: body.roundId, ...outcome } });
     }),
-    
-    // Запрос на завершение раунда (cashout)
     http.post('/api/bets/cashout', () => {
         console.log('[MSW] Intercepted POST /api/bets/cashout');
         return HttpResponse.json({ success: true });
     })
 ];
 
-// 4. Настраиваем и запускаем воркер
-const worker = setupWorker(...handlers);
-worker.start({ onUnhandledRequest: 'bypass' });
+// ШАГ 5: Это главный обработчик. Он будет срабатывать на КАЖДЫЙ сетевой запрос.
+self.addEventListener('fetch', (event) => {
+  // Мы просим MSW обработать запрос, используя наши хендлеры.
+  // Если ни один хендлер не подойдет, запрос пройдет в реальную сеть (onUnhandledRequest: 'bypass').
+  event.respondWith(
+    handleRequest(
+      event,
+      handlers,
+      {
+        onUnhandledRequest: 'bypass',
+      }
+    )
+  );
+});
