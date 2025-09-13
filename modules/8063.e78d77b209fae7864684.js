@@ -49,7 +49,23 @@
             [f, h] = (0, l.useState)(!1),
             [g, p] = (0, l.useState)(!1),
             [b, y] = (0, l.useState)([]),
+            // NEW: локальный state для кросс-бандлового моста
+            [liveBalance, setLiveBalance] = (0, l.useState)(
+              typeof window.__balance === "number" ? window.__balance : o
+            ),
             C = (0, l.useRef)(o);
+          // NEW: подписка на кросс-бандловое событие
+          (0, l.useEffect)(() => {
+            const handler = (e) => {
+              if (e?.detail && typeof e.detail.balance === "number") {
+                setLiveBalance(e.detail.balance);
+              }
+            };
+            window.addEventListener("balance:update", handler);
+            return () => window.removeEventListener("balance:update", handler);
+          }, []);
+          // NEW: финальное значение для отображения
+          const balanceToShow = typeof liveBalance === "number" ? liveBalance : o;
           return (
             (0, l.useLayoutEffect)(() => {
               if (!t) return;
@@ -62,15 +78,15 @@
               const a = [...b, { value: n, key: Math.random() }].slice(-10);
               y(a);
             }, [o]),
-            t || o || d?.length
+            t || balanceToShow || d?.length
               ? (0, a.tZ)(a.HY, {
                   children: (0, i.toChildArray)(
                     e({
                       title: m("COMMON.BALANCE"),
-                      balance: f ? String(o).replace(/./g, "*") : String(o),
+                      balance: f ? String(balanceToShow).replace(/./g, "*") : String(balanceToShow),
                       balanceShort: (() => {
                         const e =
-                          String(o).length > 8 ? (0, s.Z)(o, u) : String(o);
+                          String(balanceToShow).length > 8 ? (0, s.Z)(balanceToShow, u) : String(balanceToShow);
                         return f ? e.replace(/./g, "*") : e;
                       })(),
                       balanceHide: f,

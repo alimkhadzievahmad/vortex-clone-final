@@ -1772,13 +1772,12 @@
             (this.loopTimeout = null),
             (this.setBalance = (t) => {
               this.root.profileCommon.profile &&
-                ((this.root.profileCommon.profile = {
-                  ...this.root.profileCommon.profile,
-                  balance: (0, s.Z)(
+                ((this.root.profileCommon.setBalance(
+                  (0, s.Z)(
                     t,
                     this.root.profileCommon.profile?.rounding
-                  ),
-                }),
+                  )
+                )),
                 window.parent.postMessage(
                   JSON.stringify({ type: "balanceUpdate", balance: t }),
                   "*"
@@ -2944,6 +2943,28 @@
             (this.setCustomRtp = (t) => {
               this.customRtp = t;
             }),
+            // NEW: balanceBox для реактивного управления балансом
+            (this.balanceBox = (0, s.observable).box(0)),
+            (this.setBalance = (t) => {
+              this.balanceBox.set(t);
+              if (this.profile) {
+                this.profile = { ...this.profile, balance: t };
+              }
+            }),
+            (this.setProfile = (t) => {
+              this.profile = t;
+              if (t && typeof t.balance === "number") {
+                this.balanceBox.set(t.balance);
+              }
+            }),
+            (this.mergeProfile = (t) => {
+              const e = this.profile || {};
+              const o = { ...e, ...t };
+              this.profile = o;
+              if (typeof t?.balance === "number") {
+                this.balanceBox.set(t.balance);
+              }
+            }),
             (this.root = t),
             (0, s.makeObservable)(this),
             this.checkCookies());
@@ -2993,7 +3014,9 @@
         g([s.action], _.prototype, "setCustomerId", void 0),
         g([s.action], _.prototype, "parseTokenData", void 0),
         g([s.action], _.prototype, "setProfileSid", void 0),
-        g([s.action], _.prototype, "setCustomRtp", void 0));
+        g([s.action], _.prototype, "setCustomRtp", void 0),
+        g([s.observable], _.prototype, "balanceBox", void 0),
+        g([s.action], _.prototype, "mergeProfile", void 0));
       var T = _;
     },
     9273: (t, e, o) => {
@@ -3820,11 +3843,10 @@
                   i = new URLSearchParams(o).get("cid"),
                   s = { hasError: !1 };
                 return (
-                  l.includes(e.toUpperCase()) &&
-                    i &&
-                    c.includes(i) &&
-                    t % 100 &&
-                    ((s.hasError = !0), (s.error = n().t("ERROR.MULTIPLE_OF"))),
+                   ((e = ((e ?? '') + '').toUpperCase()),
+                    (i = (i ?? '')),
+                    e && l.includes(e) && i && c.includes(i) && (t % 100) &&
+                    ((s.hasError = !0), (s.error = n().t("ERROR.MULTIPLE_OF")))),
                   s
                 );
               })(Number(t), o);

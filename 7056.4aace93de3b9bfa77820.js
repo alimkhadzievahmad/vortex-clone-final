@@ -142,6 +142,7 @@
             (this.placebetProcessing = !1),
             (this.placebetClicked = !1),
             (this.cashoutProcessing = !1),
+            (this.rebetOnCashout = !0),
             (this.roundId = c.Z.get("roundId") || ""),
             (this.prevRoundId = ""),
             (this.roundSeed = ""),
@@ -453,14 +454,36 @@
                   roundId: this.roundId,
                   version: this.version,
                 });
+                // [BALANCE] increment by ticketId (применится после updateBalanceFromTicketId)
+                if (!this.isFreebetEnabled) {
+                  const balNow = Number(this.root.profileCommon.profile.balance || 0);
+                  const fin = +(balNow + Number(s.payout || 0));
+                  this.root.balanceCommon.setBalanceData([fin, this.prevRoundId, s.result || "won"]);
+                  // NEW: используем MobX action для обновления баланса
+                  this.root.profileCommon.setBalance(fin);
+                  // NEW: кросс-бандловый мост для UI
+                  window.__balance = fin;
+                  window.dispatchEvent(new CustomEvent('balance:update', { detail: { balance: fin }}));
+                  // NEW: форс-рефреш профиля, если UI подписан на API-профиль
+                  await this.safeRefreshProfile();
+                }
+
                 (this.setGameState(s.state),
                   this.setResult(s.result),
                   this.setCoefficent(s.coefficient),
                   this.setPayout(s.payout),
                   this.setRoundId(s.roundId),
                   (this.cashoutProcessing = !1),
-                  this.showWinScreen(),
-                  "won" === s.result &&
+                  this.showWinScreen());
+                
+                // <<< НОВОЕ: старт нового раунда
+                await this.createGame();
+                // <<< НОВОЕ: если нужно сразу списывать ставку
+                if (this.rebetOnCashout && !this.isFreebetEnabled) {
+                  await this.placeBet();
+                }
+
+                ("won" === s.result &&
                     this.isFreebetEnabled &&
                     this.root.freebetsCommon.updateFreebetsPayout({
                       index: 0,
@@ -561,6 +584,37 @@
                         superBonusState: S,
                         autocashout: I,
                       } = n;
+                      // [BALANCE] immediate decrement + optional autocashout increment
+                      this.prevRoundId = this.roundId;
+                      if (!this.isFreebetEnabled) {
+                        const balNow = Number(this.root.profileCommon.profile.balance || 0);
+                        const stake = Number(this.amount) || 0;
+
+                        // DECREMENT: списываем сразу
+                        const dec = +(balNow - stake);
+                        this.root.balanceCommon.setBalanceData([dec, this.prevRoundId]);
+                        // NEW: используем MobX action для обновления баланса
+                        this.root.profileCommon.setBalance(dec);
+                        // NEW: кросс-бандловый мост для UI
+                        window.__balance = dec;
+                        window.dispatchEvent(new CustomEvent('balance:update', { detail: { balance: dec }}));
+                        // NEW:
+                        await this.safeRefreshProfile();
+
+                        // Если сервер сразу вернул автокэшаут — кладём и INCREMENT
+                        if (I) {
+                          const fin = +(dec + Number(h || 0));
+                          this.root.balanceCommon.setBalanceData([fin, this.prevRoundId, u || "won"]);
+                          // NEW: используем MobX action для обновления баланса
+                          this.root.profileCommon.setBalance(fin);
+                          // NEW: кросс-бандловый мост для UI
+                          window.__balance = fin;
+                          window.dispatchEvent(new CustomEvent('balance:update', { detail: { balance: fin }}));
+                          // NEW:
+                          await this.safeRefreshProfile();
+                        }
+                      }
+
                     ((this.nonce = this.nonce + 1),
                       b.V.invoke(
                         "stopSpin",
@@ -731,6 +785,52 @@
               (c.Z.set(`saved_amount:${e}`, String(t)),
                 (this.amount = String(t)));
             }),
+            (this.undoStep = () => {
+              const curr = [...this.gameState.collection];
+              // ищем последний заполненный сектор (правое самое ненулевое значение)
+              const revIdx = curr.slice().reverse().findIndex(v => v > 0);
+              if (revIdx === -1) return;               // уже всё по нулям
+              const i = curr.length - 1 - revIdx;
+              const next = curr.map((v, k) => (k === i ? Math.max(0, v - 1) : v));
+
+              // Кладём через exCollection, чтобы сработала твоя анимация setStep
+              this.setGameState({
+                ...this.gameState,
+                exCollection: curr,                     // откуда двигаемся
+                collection: next,                       // куда двигаемся
+                cashable: next.some(v => v > 0),        // кэшаут доступен если что-то собрано
+                initial: next.every(v => v === 0),
+              });
+            }),
+            // --- add: refresh profile from API or store method
+            (this.safeRefreshProfile = async () => {
+              try {
+                // 1) если в сторе есть готовый метод
+                if (this.root?.profileCommon?.loadProfile) {
+                  await this.root.profileCommon.loadProfile();
+                  return;
+                }
+              } catch (e) {
+                console.warn("[PROFILE] loadProfile() error:", e);
+              }
+
+              // 2) fallback: прямой запрос к API + ручное обновление стора
+              try {
+                const res = await fetch("/api/common/profile", { method: "POST", headers: { "Content-Type": "application/json" } });
+                const data = await res.json();
+
+                if (data && this.root?.profileCommon) {
+                  const pc = this.root.profileCommon;
+                  if (typeof pc.setProfile === "function") {
+                    pc.setProfile(data);
+                  } else if (pc.profile) {
+                    pc.profile = { ...pc.profile, ...data };  // обновим ссылку для перерендера
+                  }
+                }
+              } catch (e) {
+                console.warn("[PROFILE] fetch /api/common/profile error:", e);
+              }
+            }),
             (0, s.makeObservable)(this),
             (this.root = t),
             (this.spinVersion = "v2.0"),
@@ -756,6 +856,8 @@
             }),
             (this.timers = []),
             (this.gameConfig = e),
+            // гарантируем режим применения инкремента по билету
+            (this.gameConfig.balance = { ...(this.gameConfig.balance || {}), mode: "ticketId", delay: 0 }),
             (this.gameServerId = e.gameServerId),
             (this.gameServerTheme = e.gameServerTheme),
             (this.userLoading = !1),
@@ -1000,6 +1102,7 @@
         g([s.action], y.prototype, "placeBet", void 0),
         g([s.action], y.prototype, "retrieveAmount", void 0),
         g([s.action], y.prototype, "setAmount", void 0),
+        g([s.action], y.prototype, "safeRefreshProfile", void 0),
         (e.default = y));
     },
   },

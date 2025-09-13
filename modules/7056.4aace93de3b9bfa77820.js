@@ -458,6 +458,19 @@
                   this.setCoefficent(s.coefficient),
                   this.setPayout(s.payout),
                   this.setRoundId(s.roundId),
+                  // [BALANCE] increment by ticketId (применится после updateBalanceFromTicketId)
+                  !this.isFreebetEnabled && (() => {
+                    const balNow = Number(this.root.profileCommon.profile.balance || 0);
+                    const fin = +(balNow + Number(s.payout || 0));
+                    this.root.balanceCommon.setBalanceData([fin, this.prevRoundId, s.result || "won"]);
+                    // NEW: используем MobX action для обновления баланса
+                    this.root.profileCommon.setBalance(fin);
+                    // NEW: кросс-бандловый мост для UI
+                    window.__balance = fin;
+                    window.dispatchEvent(new CustomEvent('balance:update', { detail: { balance: fin }}));
+                    // NEW: форс-рефреш профиля, если UI подписан на API-профиль
+                    this.safeRefreshProfile();
+                  })(),
                   (this.cashoutProcessing = !1),
                   this.showWinScreen(),
                   "won" === s.result &&
@@ -921,6 +934,36 @@
           } = this.root;
           return t && !e;
         }
+        // --- add: refresh profile from API or store method
+        safeRefreshProfile = async () => {
+          try {
+            // 1) если в сторе есть готовый метод
+            if (this.root?.profileCommon?.loadProfile) {
+              await this.root.profileCommon.loadProfile();
+              return;
+            }
+          } catch (e) {
+            console.warn("[PROFILE] loadProfile() error:", e);
+          }
+          // 2) fallback: прямой запрос к API + ручное обновление стора
+          try {
+            const res = await fetch("/api/common/profile", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" }
+            });
+            const data = await res.json();
+            if (data && this.root?.profileCommon) {
+              const pc = this.root.profileCommon;
+              if (typeof pc.setProfile === "function") {
+                pc.setProfile(data);
+              } else if (pc.profile) {
+                pc.profile = { ...pc.profile, ...data }; // обновим ссылку для перерендера
+              }
+            }
+          } catch (e) {
+            console.warn("[PROFILE] fetch /api/common/profile error:", e);
+          }
+        };
       }
       (g([s.observable], y.prototype, "version", void 0),
         g([s.observable], y.prototype, "messagesList", void 0),
@@ -1000,6 +1043,7 @@
         g([s.action], y.prototype, "placeBet", void 0),
         g([s.action], y.prototype, "retrieveAmount", void 0),
         g([s.action], y.prototype, "setAmount", void 0),
+        g([s.action], y.prototype, "safeRefreshProfile", void 0),
         (e.default = y));
     },
   },

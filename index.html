@@ -11,31 +11,179 @@
 		background: #000000;
 	}
 	</style>
+	<link rel="stylesheet" href="/static/css/fonts-override.css?v=1">
 </head>
 
 <body translate="no">
 	<div id="app"></div>
 	<div id="modal"></div>
 
-	<!-- ================== НАЧАЛО БЛОКА MSW ================== -->
+	<!-- ================== НАЧАЛО БЛОКА МОКИРОВАНИЯ ================== -->
+	<script src="fix-auth-error.js"></script>
+	<script src="api-monitor.js"></script>
+	<!-- <script src="button-debug.js"></script> -->
+	<!-- <script src="deep-diagnosis.js"></script> -->
+	<script src="balance-spy.js"></script>
 	<script>
-	  // Регистрируем наш Service Worker
+	  // Очищаем старые Service Workers
 	  if ('serviceWorker' in navigator) {
-	    navigator.serviceWorker.register('/mock-service-worker.js')
-	      .then(function(registration) {
-	        console.log('[MSW] Service Worker registration successful with scope: ', registration.scope);
-	      })
-	      .catch(function(err) {
-	        console.error('[MSW] Service Worker registration failed: ', err);
-	      });
+	    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+	      for(let registration of registrations) {
+	        console.log('[Mock] Удаляем старый Service Worker:', registration.scope);
+	        registration.unregister();
+	      }
+	    });
 	  }
 	</script>
-	<!-- =================== КОНЕЦ БЛОКА MSW =================== -->
+	<script>
+	  // Устанавливаем токен сразу в localStorage
+	  const FAKE_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTIzNDU2LCJuaWNrbmFtZSI6IkxvY2FsVm9ydGV4IiwiYmFsYW5jZSI6OTk5OTk5MDAsInN1YiI6InVzZXJfMTIzNDU2IiwiZXhwIjoxNzM3NDAwMDAwLCJpYXQiOjE3Mzc0MDAwMDB9.fake-signature';
+	  
+	  // Очищаем старые токены
+	  localStorage.removeItem('token');
+	  sessionStorage.removeItem('token');
+	  
+	  // Устанавливаем новый токен
+	  localStorage.setItem('token', FAKE_JWT);
+	  console.log('[Mock] Токен установлен в localStorage:', FAKE_JWT);
+	  
+	  // Добавляем функцию для проверки токена
+	  window.checkToken = function() {
+	    const token = localStorage.getItem('token');
+	    console.log('[Mock] Текущий токен в localStorage:', token);
+	    if (token) {
+	      try {
+	        const parts = token.split('.');
+	        const header = JSON.parse(atob(parts[0]));
+	        const payload = JSON.parse(atob(parts[1]));
+	        console.log('[Mock] Токен декодирован:', { header, payload });
+	      } catch (e) {
+	        console.error('[Mock] Ошибка декодирования токена:', e);
+	      }
+	    }
+	  };
+	  
+	  // Добавляем функцию для проверки профиля
+	  window.checkProfile = function() {
+	    fetch('/api/common/profile', { method: 'POST' })
+	      .then(response => response.json())
+	      .then(data => {
+	        console.log('[Mock] Ответ профиля:', data);
+	        // Проверяем все поля на undefined
+	        Object.keys(data).forEach(key => {
+	          if (data[key] === undefined) {
+	            console.warn('[Mock] Поле undefined:', key);
+	          }
+	        });
+	      })
+	      .catch(e => console.error('[Mock] Ошибка получения профиля:', e));
+	  };
+	  
+	  // Регистрируем простой Service Worker
+	  if ('serviceWorker' in navigator) {
+	    navigator.serviceWorker.register('./mock-service-worker.js?v=15')
+	      .then(function(registration) {
+	        console.log('[Mock] Service Worker зарегистрирован:', registration.scope);
+	        return navigator.serviceWorker.ready;
+	      })
+	      .then(function(registration) {
+	        console.log('[Mock] Service Worker готов');
+	      })
+	      .catch(function(err) {
+	        console.error('[Mock] Ошибка регистрации Service Worker:', err);
+	      });
+	  } else {
+	    console.log('[Mock] Service Worker не поддерживается');
+	  }
+	</script>
+	<!-- =================== КОНЕЦ БЛОКА МОКИРОВАНИЯ =================== -->
+
+	<!-- Мок WebSocket для автономной работы -->
+	<script src="websocket-mock.js"></script>
+	
+	<!-- Резервные функции отладки на случай, если websocket-mock.js не загрузится -->
+	<script>
+		// Ждем загрузки websocket-mock.js
+		setTimeout(function() {
+			if (typeof window.debugToken !== 'function') {
+				console.warn('[Backup] websocket-mock.js не загрузился, создаем резервные функции...');
+				
+				// Резервная функция debugToken
+				window.debugToken = function(token) {
+					console.log('[Backup] 🔍 Отладка JWT токена:', token);
+					console.log('[Backup] 🔍 Тип токена:', typeof token);
+					console.log('[Backup] 🔍 Длина токена:', token ? token.length : 'undefined');
+					
+					if (!token) {
+						console.error('[Backup] ❌ Токен не предоставлен или undefined!');
+						return null;
+					}
+					
+					try {
+						const parts = token.split('.');
+						console.log('[Backup] 🔍 Количество частей токена:', parts.length);
+						
+						if (parts.length === 3) {
+							const header = JSON.parse(atob(parts[0]));
+							const payload = JSON.parse(atob(parts[1]));
+							console.log('[Backup] ✅ Токен декодирован успешно:');
+							console.log('[Backup] 🔑 JWT Header:', header);
+							console.log('[Backup] 🔑 JWT Payload:', payload);
+							return { header, payload };
+						} else {
+							console.error('[Backup] ❌ Неверный формат JWT токена');
+							return null;
+						}
+					} catch (error) {
+						console.error('[Backup] ❌ Ошибка декодирования токена:', error);
+						return null;
+					}
+				};
+				
+				// Резервная функция debugGameJWT
+				window.debugGameJWT = function() {
+					console.log('[Backup] 🔍 Поиск JWT токена в игре...');
+					
+					const searchPaths = [
+						'window.game.profile.token',
+						'window.profile.token',
+						'window.user.token',
+						'window.auth.token',
+						'window.token'
+					];
+					
+					for (const path of searchPaths) {
+						try {
+							const value = eval(path);
+							if (value) {
+								console.log(`[Backup] 🔑 Найден токен в ${path}:`, value);
+								return window.debugToken(value);
+							}
+						} catch (e) {
+							// Игнорируем ошибки
+						}
+					}
+					
+					console.error('[Backup] ❌ JWT токен не найден!');
+					return null;
+				};
+				
+				// Резервная функция debugProfile
+				window.debugProfile = function() {
+					console.log('[Backup] 🔍 Отладка профиля...');
+					return window.debugGameJWT();
+				};
+				
+				console.log('[Backup] ✅ Резервные функции отладки созданы');
+			}
+		}, 2000); // Ждем 2 секунды
+	</script>
+	
 
 	<!-- Оригинальный скрипт игры -->
 	<script defer="defer" src="index.9480c28da0a805029a18.js"></script>
 
-	<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"97bf2a8e5d11049b","serverTiming":{"name":{"cfExtPri":true,"cfEdge":true,"cfOrigin":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}},"version":"2025.8.0","token":"41feb1167b0f4c17ac2ed675e7c289cd"}' crossorigin="anonymous"></script>
+	<!-- Внешние скрипты удалены для автономной работы -->
 </body>
 
 </html>
