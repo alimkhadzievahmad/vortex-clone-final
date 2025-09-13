@@ -5,29 +5,18 @@
     {
       "src": "app.py",
       "use": "@vercel/python"
-    },
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/app.py"
+      "source": "/api/(.*)",
+      "destination": "/app.py"
     },
     {
-      "src": "/v2/api/(.*)",
-      "dest": "/app.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/v2/api/(.*)",
+      "destination": "/app.py"
     }
   ],
-  "env": {
-    "PYTHONPATH": "/var/task"
-  },
   "headers": [
     {
       "source": "/(.*)",
