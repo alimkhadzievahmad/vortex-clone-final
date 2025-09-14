@@ -1863,7 +1863,7 @@
             (0, i.BX)("div", {
               className: d.Z.tmpFooter,
               children: [
-                (0, i.BX)("div", { children: ["Turbo Games • ", t] }),
+                (0, i.BX)("div", { children: ["Games • ", t] }),
                 (0, i.tZ)(p.q, {
                   children: ({
                     years: e,

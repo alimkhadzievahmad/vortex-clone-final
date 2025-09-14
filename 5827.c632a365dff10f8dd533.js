@@ -53,7 +53,7 @@
           : (0, a.BX)("div", {
               style: n,
               className: r()(Z.name, { [Z.nameDark]: "dark" === s }),
-              children: ["Turbo Games • ", t && t.text && t.text],
+              children: ["", t && t.text && t.text],
             });
       };
     },
