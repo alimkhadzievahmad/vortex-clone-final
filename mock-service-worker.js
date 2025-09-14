@@ -5,7 +5,7 @@ console.log('[MSW] Service Worker загружен');
 let BALANCE = 1000; // стартовый баланс
 
 // Белый список разрешенных хостов
-const ALLOW_HOSTS = ['localhost', '127.0.0.1', 'vortex-clone-fina.vercel.app'];
+const ALLOW_HOSTS = ['localhost', '127.0.0.1', 'vortex-clone-final.vercel.app'];
 
 self.addEventListener('install', (event) => {
   console.log('[MSW] Service Worker: install');
