@@ -1,0 +1,22 @@
+/* Скрытие прелоадера TURBO GAMES */
+.preloader--RNQlG {
+    display: none !important;
+}
+
+.preloaderImg--zJ7gU {
+    display: none !important;
+}
+
+.preloaderVideo--dZyjs {
+    display: none !important;
+}
+
+/* Скрытие текста "Turbo Games • Vortex" */
+.name--TP6Ls {
+    display: none !important;
+}
+
+/* Скрытие иконки Turbo Universe */
+.iconTurboUniverse--Of1Ih {
+    display: none !important;
+}
