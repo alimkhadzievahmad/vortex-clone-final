@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "vortex-clone",
   "builds": [
     {
       "src": "app.py",
@@ -15,10 +14,6 @@
     {
       "src": "/v2/api/(.*)",
       "dest": "/app.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
     }
   ]
 }
