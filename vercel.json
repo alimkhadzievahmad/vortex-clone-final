@@ -7,33 +7,18 @@
       "use": "@vercel/python"
     }
   ],
-  "rewrites": [
+  "routes": [
     {
-      "source": "/api/(.*)",
-      "destination": "/app.py"
+      "src": "/api/(.*)",
+      "dest": "/app.py"
     },
     {
-      "source": "/v2/api/(.*)",
-      "destination": "/app.py"
-    }
-  ],
-  "headers": [
+      "src": "/v2/api/(.*)",
+      "dest": "/app.py"
+    },
     {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-Requested-With"
-        }
-      ]
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }
