@@ -99,7 +99,7 @@
               g ||
               (n && h === p && h !== (0, l.Z)(Number(o) + C)) ||
               (n && !d.collection.find((e) => e > 1)),
-            v = { title: T("COMMON.CASHOUT"), request: f, disabled: O },
+            v = { title: T("CASHOUT"), request: f, disabled: O },
             M = (e) => {
               if (f || O) return !1;
               (m(n), t(e));

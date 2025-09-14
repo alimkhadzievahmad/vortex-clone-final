@@ -668,7 +668,7 @@
             { t: s } = (0, b.useTranslation)();
           return (0, r.tZ)(r.HY, {
             children: e({
-              title: s("COMMON.BALANCE_BEFORE"),
+              title: s("BALANCE_BEFORE"),
               text: `${t} ${n.toUpperCase()}`,
             }),
           });
@@ -681,7 +681,7 @@
             { t: s } = (0, b.useTranslation)();
           return (0, r.tZ)(r.HY, {
             children: e({
-              title: s("COMMON.BALANCE_AFTER"),
+              title: s("BALANCE_AFTER"),
               text: `${t} ${n.toUpperCase()}`,
             }),
           });

@@ -99,7 +99,7 @@
               g ||
               (n && h === p && h !== (0, l.Z)(Number(o) + C)) ||
               (n && !d.collection.find((e) => e > 1)),
-            v = { title: T("COMMON.CASHOUT"), request: f, disabled: O },
+            v = { title: T("Cash out"), request: f, disabled: O },
             M = (e) => {
               if (f || O) return !1;
               (m(n), t(e));
@@ -289,17 +289,17 @@
             } = (0, i.GET_STORE)(),
             { t: d } = (0, a.useTranslation)(),
             [g, h] = (0, u.useState)(!1),
-            [p, E] = (0, u.useState)(`${d("COMMON.MAX_PROFIT")} ${n}${s}`),
+            [p, E] = (0, u.useState)(`${d("MAX PROFIT")} ${n}${s}`),
             b = (0, u.useRef)(null),
             C = Math.min(t, o);
           return (
             (0, u.useEffect)(() => {
               (Number(m) === C || c) &&
                 (h(!0),
-                E(c ?? `${d("COMMON.MAX_PROFIT")} ${n}${s}`),
+                E(c ?? `${d("MAX PROFIT")} ${n}${s}`),
                 b.current && clearTimeout(b.current),
                 (b.current = window.setTimeout(() => {
-                  (h(!1), E(`${d("COMMON.MAX_PROFIT")} ${n}${s}`));
+                  (h(!1), E(`${d("MAX PROFIT")} ${n}${s}`));
                 }, f.amountTooltipTimeout)));
             }, [C, m]),
             (0, r.tZ)(r.HY, { children: e({ titleMaxWin: p, showTooltip: g }) })
@@ -375,7 +375,7 @@
                     disabled: g || h,
                   },
                   children: e({
-                    title: t("COMMON.BET_AMOUNT"),
+                    title: t("BET AMOUNT"),
                     titleError: v,
                     disabled: g || h || M,
                     defaultValue: w,
@@ -422,8 +422,8 @@
                 : u;
           return (0, r.tZ)(r.HY, {
             children: e({
-              title: f("COMMON.PAYOUT"),
-              titlePartial: f("VORTEX.PART_CASHOUT"),
+              title: f("Payout"),
+              titlePartial: f("Part PayOut"),
               payout: s,
               payoutShort: (0, C.Z)(s, n),
               payoutWithSign: `${t}${(0, C.Z)(s, n)}`,

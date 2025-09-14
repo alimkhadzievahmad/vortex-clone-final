@@ -114,7 +114,7 @@
               ? (0, i.tZ)(i.HY, {
                   children: (0, t.toChildArray)(
                     e({
-                      title: g("COMMON.BALANCE"),
+                      title: g("Balance"),
                       balance: m ? String(c).replace(/./g, "*") : String(c),
                       balanceShort: (() => {
                         const e =
