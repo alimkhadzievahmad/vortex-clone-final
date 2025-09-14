@@ -1,0 +1,237 @@
+/* Исправление для отсутствующих иконок fm-iconFont */
+
+/* Убеждаемся, что шрифт иконок загружается */
+@font-face {
+    font-family: "fm-iconFont";
+    src: url("data:font/woff2;base64,") format("woff2"),
+         url("data:font/woff;base64,") format("woff"),
+         url("data:font/truetype;base64,") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+    font-display: block;
+}
+
+/* Базовые стили для всех иконок */
+i[class^="fm-iconFont-"]:before, 
+i[class*=" fm-iconFont-"]:before {
+    font-family: fm-iconFont !important;
+    font-style: normal !important;
+    font-weight: normal !important;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: inline-block;
+}
+
+/* Иконка кредитной карты - используем правильный класс с хешем */
+.fm-iconFont-ios-creditcard:before,
+.fm-iconFont-ios-creditcard--gMHLT:before {
+    content: "\f11f";
+}
+
+/* Дополнительные иконки, которые могут отсутствовать */
+.fm-iconFont-ios-copy:before {
+    content: "\f11e";
+}
+
+.fm-iconFont-ios-cup:before {
+    content: "\f120";
+}
+
+.fm-iconFont-ios-cursor-click:before {
+    content: "\f121";
+}
+
+.fm-iconFont-ios-dollar:before {
+    content: "\f122";
+}
+
+.fm-iconFont-ios-down:before {
+    content: "\f123";
+}
+
+.fm-iconFont-ios-edit:before {
+    content: "\f124";
+}
+
+.fm-iconFont-ios-flash-off:before {
+    content: "\f125";
+}
+
+.fm-iconFont-ios-flash-on:before {
+    content: "\f126";
+}
+
+.fm-iconFont-ios-fullscreen-off:before {
+    content: "\f127";
+}
+
+.fm-iconFont-ios-fullscreen-on:before {
+    content: "\f128";
+}
+
+.fm-iconFont-ios-home:before {
+    content: "\f129";
+}
+
+.fm-iconFont-ios-how:before {
+    content: "\f12a";
+}
+
+.fm-iconFont-ios-info:before {
+    content: "\f12b";
+}
+
+.fm-iconFont-ios-left:before {
+    content: "\f12c";
+}
+
+.fm-iconFont-ios-limit-old:before {
+    content: "\f12d";
+}
+
+.fm-iconFont-ios-limit:before {
+    content: "\f12e";
+}
+
+.fm-iconFont-ios-list:before {
+    content: "\f12f";
+}
+
+.fm-iconFont-ios-music-off:before {
+    content: "\f130";
+}
+
+.fm-iconFont-ios-music-on:before {
+    content: "\f131";
+}
+
+.fm-iconFont-ios-nav:before {
+    content: "\f132";
+}
+
+.fm-iconFont-ios-play:before {
+    content: "\f133";
+}
+
+.fm-iconFont-ios-reload:before {
+    content: "\f134";
+}
+
+.fm-iconFont-ios-right:before {
+    content: "\f135";
+}
+
+.fm-iconFont-ios-rules:before {
+    content: "\f136";
+}
+
+.fm-iconFont-ios-shared:before {
+    content: "\f137";
+}
+
+.fm-iconFont-ios-sound-off:before {
+    content: "\f138";
+}
+
+.fm-iconFont-ios-sound-on:before {
+    content: "\f139";
+}
+
+.fm-iconFont-ios-turbogame:before {
+    content: "\f13a";
+}
+
+.fm-iconFont-ios-up:before {
+    content: "\f13b";
+}
+
+.fm-iconFont-ios-warning:before {
+    content: "\f13c";
+}
+
+.fm-iconFont-like-filled:before {
+    content: "\f13d";
+}
+
+.fm-iconFont-like:before {
+    content: "\f13e";
+}
+
+.fm-iconFont-music:before {
+    content: "\f13f";
+}
+
+.fm-iconFont-my-records:before {
+    content: "\f140";
+}
+
+.fm-iconFont-mybets:before {
+    content: "\f141";
+}
+
+.fm-iconFont-network:before {
+    content: "\f142";
+}
+
+.fm-iconFont-people-icon:before {
+    content: "\f143";
+}
+
+.fm-iconFont-plates:before {
+    content: "\f144";
+}
+
+.fm-iconFont-rules-menu:before {
+    content: "\f145";
+}
+
+.fm-iconFont-rules:before {
+    content: "\f146";
+}
+
+.fm-iconFont-save:before {
+    content: "\f147";
+}
+
+.fm-iconFont-settings:before {
+    content: "\f148";
+}
+
+.fm-iconFont-sound-mute:before {
+    content: "\f149";
+}
+
+.fm-iconFont-sound:before {
+    content: "\f14a";
+}
+
+.fm-iconFont-target:before {
+    content: "\f14b";
+}
+
+.fm-iconFont-timer:before {
+    content: "\f14c";
+}
+
+.fm-iconFont-top-plays:before {
+    content: "\f14d";
+}
+
+.fm-iconFont-tournament:before {
+    content: "\f14e";
+}
+
+.fm-iconFont-turbogame-demo:before {
+    content: "\f14f";
+}
+
+.fm-iconFont-union:before {
+    content: "\f150";
+}
+
+.fm-iconFont-univers-copy:before {
+    content: "\f151";
+}

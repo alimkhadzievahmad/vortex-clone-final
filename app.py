@@ -2,9 +2,13 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import random
 import json
+import os
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, origins=['*'])
+
+# Настройки для Vercel
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = False
 
 # === IN-MEMORY BALANCE (как в MSW) ===
 BALANCE = 1000  # стартовый баланс
@@ -18,7 +22,7 @@ def get_profile_data():
         "apiKey": "123456",
         "playerName": "LocalVortex",
         "currency": "FUN",
-        "currencySign": "F",
+        "currencySign": "$",
         "rounding": 2,
         "balance": BALANCE,  # динамический баланс
         "sub": "local-demo",
@@ -60,6 +64,11 @@ def serve_index():
     """Отдаем главную страницу"""
     return send_from_directory('.', 'index.html')
 
+@app.route('/vercel')
+def vercel_index():
+    """Версия для Vercel без Service Worker"""
+    return send_from_directory('.', 'index-vercel.html')
+
 @app.route('/no-sw')
 def serve_index_no_sw():
     """Отдаем главную страницу без Service Worker"""
@@ -68,7 +77,10 @@ def serve_index_no_sw():
 @app.route('/<path:filename>')
 def serve_static(filename):
     """Отдаем статические файлы"""
-    return send_from_directory('.', filename)
+    try:
+        return send_from_directory('.', filename)
+    except FileNotFoundError:
+        return jsonify({"error": "File not found"}), 404
 
 # === API ENDPOINTS (точно как в MSW) ===
 
@@ -212,11 +224,30 @@ def cashout():
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Requested-With')
     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Max-Age', '86400')
     return response
+
+# === OPTIONS handler для CORS ===
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = jsonify({})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization,X-Requested-With")
+        response.headers.add('Access-Control-Allow-Methods', "GET,PUT,POST,DELETE,OPTIONS")
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+
+# === Vercel handler ===
+def handler(request):
+    """Handler для Vercel"""
+    return app(request.environ, lambda *args: None)
 
 if __name__ == '__main__':
     print('[APP] Запуск сервера...')
     print(f'[APP] Стартовый баланс: {BALANCE}')
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)

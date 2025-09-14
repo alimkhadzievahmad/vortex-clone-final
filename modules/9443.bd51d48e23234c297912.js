@@ -136,7 +136,7 @@
               ? (0, r.tZ)(r.HY, {
                   children: (0, o.toChildArray)(
                     e({
-                      title: "BALANCE",
+                      title: "Balance",
                       balance: h ? String(l).replace(/./g, "*") : String(l),
                       balanceShort: (() => {
                         const e =

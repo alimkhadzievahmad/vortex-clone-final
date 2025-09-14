@@ -417,7 +417,7 @@
                   children: [e, ":"],
                 }),
                 (0, a.tZ)("i", {
-                  class: "fm-iconFont fm-iconFont-ios-creditcard",
+                  class: "fi fi-rr-credit-card",
                 }),
                 l,
                 (0, a.BX)("span", {

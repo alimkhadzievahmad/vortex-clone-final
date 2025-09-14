@@ -29,7 +29,7 @@ const mockResponses = {
       apiKey: "123456",
       playerName: 'LocalVortex',
       currency: 'FUN',
-      currencySign: 'F',
+      currencySign: '$',
       rounding: 2,
       balance: BALANCE, // динамический баланс из памяти
       sub: 'local-demo',
@@ -44,7 +44,7 @@ const mockResponses = {
       apiKey: "123456",
       playerName: 'LocalVortex',
       currency: 'FUN',
-      currencySign: 'F',
+      currencySign: '$',
       rounding: 2,
       balance: BALANCE, // динамический баланс из памяти
       sub: 'local-demo',
@@ -279,24 +279,25 @@ function forceTicks(payload, fixed = 12) {
 }
 
 // ==== GAME STATE (глобально, чтобы сохранялось между запросами) ====
-  const RINGS = { red: 0, green: 1, blue: 2 };
-  const MAX_STEP = 3; // 0..3 => 4 значения в массивах red/green/blue
+const RINGS = { red: 0, green: 1, blue: 2 };
+const MAX_STEP = 3;
+const SYMBOLS = ['Symbol1', 'Symbol2', 'Symbol3', 'SymbolNeutral', 'SymbolLoss'];
 
-  // Используем символы, которые ожидает фронт:
-  const SYMBOLS = ['Symbol1', 'Symbol2', 'Symbol3', 'SymbolNeutral', 'SymbolLoss'];
+function clamp(x, lo, hi) { return Math.min(Math.max(x, lo), hi); }
+function pickSymbol() { return SYMBOLS[(Math.random() * SYMBOLS.length) | 0]; }
 
-  function clamp(x, lo, hi) { return Math.min(Math.max(x, lo), hi); }
-  function pickSymbol() { return SYMBOLS[(Math.random() * SYMBOLS.length) | 0]; }
+let lastState = {
+  initial: true,
+  collection: [0,0,0],
+  bonusWin: 0,
+  superBonus: false,
+  symbol: 'SymbolNeutral',
+  cashable: false
+};
+let roundCounter = 1;
 
-  let lastState = {
-    initial: true,
-    collection: [0, 0, 0], // [red, green, blue]
-    bonusWin: 0,
-    superBonus: false,
-    symbol: 'SymbolNeutral',
-    cashable: false
-  };
-  let roundCounter = 1;
+// 👉 НОВОЕ: стек истории реальных инкрементов (Symbol1/2/3)
+let historySymbols = [];  // например: ['Symbol3','Symbol2',...]
 
   function applySymbol(prev, sym) {
     const col = prev.collection.slice();
@@ -375,8 +376,12 @@ self.addEventListener('fetch', (event) => {
         roundCounter += 1;
         const sym = pickSymbol();
         lastState = applySymbol(lastState, sym);
-        
-        // Разрешаем кэшаут после спина
+
+        // 👉 НОВОЕ: записываем историю только для инкрементов
+        if (sym === 'Symbol1' || sym === 'Symbol2' || sym === 'Symbol3') {
+          historySymbols.push(sym);
+        }
+
         lastState = { ...lastState, cashable: true };
         
         return createJsonResponse({
@@ -391,40 +396,169 @@ self.addEventListener('fetch', (event) => {
       return;
     }
 
-    // CASHOUT — зачисляем payout, и СРАЗУ начинаем новый раунд с нуля
-    if ((pathname === '/api/bets/cashout' || pathname === '/v2/api/bets/cashout') &&
-        method === 'POST') {
-      event.respondWith((async () => {
-        // 1) Зачисляем деньги
-        const payout = +(Math.random() * 3 + 1).toFixed(2);
-        BALANCE += payout;
-        console.log('[MSW] Зачисление:', payout, 'Новый баланс:', BALANCE);
+// CASHOUT — универсальный обработчик: partial ("-1") ИЛИ полный
+if ((pathname === '/api/bets/cashout' || pathname === '/v2/api/bets/cashout') &&
+    method === 'POST') {
+  event.respondWith((async () => {
+    // читаем тело и параметры запроса
+    let body = {};
+    try { body = await event.request.clone().json(); } catch {}
+    const qs = url.searchParams;
 
-        // 2) Отключаем кэшаут у текущего и ГОТОВИМ новый раунд
-        roundCounter += 1;
+    // любой из флагов будет означать "частичный"
+    const isPartial =
+      body?.partial === true ||
+      body?.undo === true ||
+      body?.type === 'part' ||
+      body?.cashout === 'part' ||
+      qs.get('partial') === '1' ||
+      qs.get('mode') === 'part' ||
+      qs.get('cashout') === 'part';
 
-        // ВАЖНО: возвращаем в ответе уже «обнулённое» состояние,
-        // чтобы фронт сам перерисовал стартовое состояние.
-        lastState = {
-          initial: true,
-          collection: [0, 0, 0],
-          bonusWin: 0,
-          superBonus: false,
-          symbol: 'SymbolNeutral',
-          cashable: false
-        };
+    if (isPartial) {
+      // ====== PARTIAL: ОДИН ШАГ НАЗАД, БЕЗ ИЗМЕНЕНИЯ БАЛАНСА ======
+      console.log('[MSW][CASHOUT] partial/undo ветка');
+      const col = (lastState?.collection || [0,0,0]).slice();
+      const total = col[0] + col[1] + col[2];
 
-        // 3) Отдаём ответ: баланс уже начислили, а состояние — чистое
+      if (total < 2) {
+        // меньше двух шагов — ничего не делаем
         return createJsonResponse({
           state: lastState,
-          result: 'won',
-          payout,
-          coefficient: +(1 + Math.random() * 2).toFixed(2),
+          undone: false,
+          reason: 'not_enough_progress',
           roundId: `round-${roundCounter}`
         });
-      })());
-      return;
+      }
+
+      // снимаем ПОСЛЕДНИЙ реальный инкремент
+      let last = null;
+      while (historySymbols.length && !last) {
+        const s = historySymbols.pop();
+        if (s === 'Symbol1' || s === 'Symbol2' || s === 'Symbol3') last = s;
+      }
+      if (!last) {
+        // запасной путь — правый ненулевой
+        const order = [2,1,0]; // blue, green, red
+        for (const idx of order) {
+          if (col[idx] > 0) { col[idx] -= 1; break; }
+        }
+      } else {
+        if (last === 'Symbol1' && col[2] > 0) col[2] -= 1; // blue
+        if (last === 'Symbol2' && col[1] > 0) col[1] -= 1; // green
+        if (last === 'Symbol3' && col[0] > 0) col[0] -= 1; // red
+      }
+
+      lastState = {
+        ...(lastState || {}),
+        collection: col,
+        symbol: 'SymbolNeutral',
+        cashable: col.some(v => v > 0),
+        initial: col.every(v => v === 0)
+      };
+
+      console.log('[MSW][CASHOUT] partial/undo OK, collection:', col);
+      return createJsonResponse({
+        state: lastState,
+        undone: true,
+        roundId: `round-${roundCounter}`
+      });
     }
+
+    // ====== FULL CASHOUT: начисляем деньги и ОБНУЛЯЕМ игру ======
+    console.log('[MSW][CASHOUT] full ветка');
+    const payout = +(Math.random() * 3 + 1).toFixed(2);
+    BALANCE += payout;
+    console.log('[MSW] Зачисление:', payout, 'Новый баланс:', BALANCE);
+
+    roundCounter += 1;
+    lastState = {
+      initial: true,
+      collection: [0,0,0],
+      bonusWin: 0,
+      superBonus: false,
+      symbol: 'SymbolNeutral',
+      cashable: false
+    };
+    historySymbols = [];
+
+    return createJsonResponse({
+      state: lastState,
+      result: 'won',
+      payout,
+      coefficient: +(1 + Math.random() * 2).toFixed(2),
+      roundId: `round-${roundCounter}`
+    });
+  })());
+  return;
+}
+
+// === UNDO ONE STEP (кнопка "-1") ===
+// Поддерживаем несколько путей, чтобы не трогать фронт:
+const isUndo =
+  (
+    (pathname === '/api/bets/cashoutPart') ||
+    (pathname === '/api/bets/cashout/part') ||
+    (pathname === '/api/bets/undo') ||
+    (pathname === '/api/game/undo')
+  ) && method === 'POST';
+
+if (isUndo) {
+  event.respondWith((async () => {
+    const col = (lastState?.collection || [0,0,0]).slice();
+    const total = col[0] + col[1] + col[2];
+
+    // Требование "2+" — считаем суммарные шаги
+    if (total < 2) {
+      // Возвращаем текущее состояние без изменений (и без денег)
+      console.log('[MSW][UNDO] Недостаточно прогресса для отката');
+      return createJsonResponse({
+        state: lastState,
+        undone: false,
+        reason: 'not_enough_progress'
+      }, 200);
+    }
+
+    // Попытаемся снять ПОСЛЕДНИЙ реальный инкремент из стека
+    let last = null;
+    while (historySymbols.length && !last) {
+      const s = historySymbols.pop();
+      if (s === 'Symbol1' || s === 'Symbol2' || s === 'Symbol3') last = s;
+    }
+
+    // Если история пуста (на всякий случай), откатим правый ненулевой
+    if (!last) {
+      const order = [2,1,0]; // blue, green, red — "самое правое ненулевое"
+      for (const idx of order) {
+        if (col[idx] > 0) { col[idx] -= 1; break; }
+      }
+    } else {
+      if (last === 'Symbol1' && col[2] > 0) col[2] -= 1; // blue
+      if (last === 'Symbol2' && col[1] > 0) col[1] -= 1; // green
+      if (last === 'Symbol3' && col[0] > 0) col[0] -= 1; // red
+    }
+
+    // Обновляем состояние (баланс НЕ трогаем)
+    lastState = {
+      ...(lastState || {}),
+      collection: col,
+      symbol: 'SymbolNeutral',
+      cashable: col.some(v => v > 0),
+      initial: col.every(v => v === 0)
+    };
+
+    console.log('[MSW][UNDO] Откат выполнен:', col);
+
+    // roundCounter не меняем — это тот же самый раунд
+    return createJsonResponse({
+      state: lastState,
+      undone: true,
+      roundId: `round-${roundCounter}`
+    });
+  })());
+  return;
+}
+
 // ==== /DYNAMIC GAME MOCKS ====
 
 
