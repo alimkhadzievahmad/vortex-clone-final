@@ -48,7 +48,7 @@ def get_game_settings_data():
 
 def get_game_config_data():
     return {
-        "progressMax": 3,  # максимум шагов на кольцо
+        "progressMax": 12,  # максимум шагов на кольцо
         "spineData": [
             {"id": "Symbol1", "ring": 2},   # blue
             {"id": "Symbol2", "ring": 1},   # green  
@@ -218,6 +218,37 @@ def cashout():
         
     except Exception as e:
         print(f'[APP] Ошибка в cashout: {e}')
+        return jsonify({"error": str(e)}), 500
+
+# === UNDO ONE STEP (кнопка "-1") ===
+@app.route('/api/bets/cashoutPart', methods=['POST'])
+@app.route('/api/bets/cashout/part', methods=['POST'])
+@app.route('/api/bets/undo', methods=['POST'])
+@app.route('/api/game/undo', methods=['POST'])
+@app.route('/v2/api/bets/cashoutPart', methods=['POST'])
+@app.route('/v2/api/bets/cashout/part', methods=['POST'])
+@app.route('/v2/api/bets/undo', methods=['POST'])
+@app.route('/v2/api/game/undo', methods=['POST'])
+def undo_step():
+    """Откат на один шаг (кнопка "-1")"""
+    try:
+        # Здесь должна быть логика отката одного шага
+        # Пока возвращаем заглушку
+        return jsonify({
+            "state": {
+                "initial": False,
+                "collection": [0, 0, 0],  # будет обновлено фронтом
+                "bonusWin": 0,
+                "superBonus": False,
+                "symbol": "SymbolNeutral",
+                "cashable": False
+            },
+            "undone": True,
+            "roundId": f"round-{roundCounter}"
+        })
+        
+    except Exception as e:
+        print(f'[APP] Ошибка в undo_step: {e}')
         return jsonify({"error": str(e)}), 500
 
 # === CORS для всех методов ===

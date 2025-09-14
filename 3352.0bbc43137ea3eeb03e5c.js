@@ -71,7 +71,7 @@
       const c = (0, o.observer)(function ({
           children: e,
           onClick: t = () => {},
-          isPartial: n = true,
+          isPartial: n = false,
         }) {
           const {
               game: {

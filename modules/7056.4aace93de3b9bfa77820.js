@@ -541,7 +541,28 @@
                       b.V.invoke("startSpinNew"),
                       v.x.invoke("startSpinNew"),
                       this.setPlacebetClicked(!0));
-                    const { data: n } = await (0, i.T0)({
+                    
+                    // до запроса:
+                    const amountNum = Number(this.amount);
+                    const balNow = Number(this.root.profileCommon.profile.balance || 0);
+                    const rollback = () => {
+                      // вернуть если что-то пошло не так
+                      const back = +(balNow).toFixed(2);
+                      this.root.balanceCommon.setBalanceData([back, this.prevRoundId, 'rollback']);
+                      this.root.profileCommon.setBalance(back);
+                      window.__balance = back;
+                      window.dispatchEvent(new CustomEvent('balance:update', { detail: { balance: back }}));
+                    };
+
+                    // мгновенно уменьшаем визуальный баланс
+                    const afterBet = +(balNow - amountNum).toFixed(2);
+                    this.root.balanceCommon.setBalanceData([afterBet, this.prevRoundId, 'place']);
+                    this.root.profileCommon.setBalance(afterBet);
+                    window.__balance = afterBet;
+                    window.dispatchEvent(new CustomEvent('balance:update', { detail: { balance: afterBet }}));
+
+                    try {
+                      const { data: n } = await (0, i.T0)({
                         headers: (0, d.Z)({
                           authorization: e,
                           apikey: r,
@@ -712,6 +733,10 @@
                             300
                         ),
                       this.setPlacebetClicked(!1));
+                    } catch (err) {
+                      rollback();
+                      throw err;
+                    }
                   } catch (t) {
                     return (
                       console.log(t),

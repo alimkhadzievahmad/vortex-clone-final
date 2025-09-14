@@ -14,6 +14,7 @@
 	<link rel="stylesheet" href="/static/css/fonts-override.css?v=1">
 	<link rel="stylesheet" href="hide-preloader.css">
 	<link rel="stylesheet" href="icon-font-fix.css">
+	<link rel="stylesheet" href="feather-icons-fallback.css">
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.css">
 </head>
 
@@ -185,6 +186,73 @@
 
 	<!-- Оригинальный скрипт игры -->
 	<script defer="defer" src="index.9480c28da0a805029a18.js"></script>
+
+	<!-- Исправление для иконки кредитной карты -->
+	<script>
+	    function fixCreditCardIcons() {
+	        // Ищем элементы с классом fi-rr-credit-card и заменяем на fm-iconFont
+	        const creditCardIcons = document.querySelectorAll('i.fi-rr-credit-card, i.fi-credit-card');
+	        
+	        creditCardIcons.forEach(function(icon) {
+	            // Заменяем классы Feather Icons на fm-iconFont
+	            icon.classList.remove('fi', 'fi-rr-credit-card', 'fi-credit-card');
+	            icon.classList.add('fm-iconFont-ios-creditcard');
+	            
+	            // Принудительно применяем стили
+	            icon.style.fontFamily = 'fm-iconFont';
+	            icon.style.fontStyle = 'normal';
+	            icon.style.fontWeight = 'normal';
+	            icon.style.display = 'inline-block';
+	            
+	            console.log('[Fix] Заменен класс иконки кредитной карты на fm-iconFont:', icon);
+	        });
+	        
+	        // Также ищем элементы рядом с балансом
+	        const balanceElements = document.querySelectorAll('[data-track="balance"], .balance');
+	        balanceElements.forEach(function(balance) {
+	            const icons = balance.querySelectorAll('i');
+	            icons.forEach(function(icon) {
+	                if (icon.classList.contains('fi-rr-credit-card') || icon.classList.contains('fi-credit-card')) {
+	                    // Заменяем классы Feather Icons на fm-iconFont
+	                    icon.classList.remove('fi', 'fi-rr-credit-card', 'fi-credit-card');
+	                    icon.classList.add('fm-iconFont-ios-creditcard');
+	                    
+	                    // Принудительно применяем стили
+	                    icon.style.fontFamily = 'fm-iconFont';
+	                    icon.style.fontStyle = 'normal';
+	                    icon.style.fontWeight = 'normal';
+	                    icon.style.display = 'inline-block';
+	                    
+	                    console.log('[Fix] Заменен класс иконки кредитной карты в балансе на fm-iconFont:', icon);
+	                }
+	            });
+	        });
+	        
+	        // Дополнительно ищем все элементы i в балансе
+	        const allBalanceIcons = document.querySelectorAll('[data-track="balance"] i, .balance i');
+	        allBalanceIcons.forEach(function(icon) {
+	            if (!icon.classList.contains('fm-iconFont-ios-creditcard') && 
+	                !icon.classList.contains('fm-iconFont-ios-creditcard--gMHLT')) {
+	                // Если это не fm-iconFont иконка, заменяем на правильную
+	                icon.classList.add('fm-iconFont-ios-creditcard');
+	                icon.style.fontFamily = 'fm-iconFont';
+	                icon.style.fontStyle = 'normal';
+	                icon.style.fontWeight = 'normal';
+	                icon.style.display = 'inline-block';
+	                console.log('[Fix] Добавлен класс fm-iconFont к иконке в балансе:', icon);
+	            }
+	        });
+	    }
+	    
+	    // Запускаем исправление несколько раз
+	    setTimeout(fixCreditCardIcons, 1000);
+	    setTimeout(fixCreditCardIcons, 3000);
+	    setTimeout(fixCreditCardIcons, 5000);
+	    setTimeout(fixCreditCardIcons, 10000);
+	    
+	    // Также запускаем каждые 2 секунды
+	    setInterval(fixCreditCardIcons, 2000);
+	</script>
 
 	<!-- Внешние скрипты удалены для автономной работы -->
 </body>
