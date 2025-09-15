@@ -66,13 +66,24 @@ const mockResponses = {
   // === Settings endpoints ===
   // === Settings endpoints ===
 '/api/games/settings': {
-  method: 'GET',
-  response: {
-    // ВАЖНО: ключи именно Symbol3/Symbol2/Symbol1
-    Symbol3: [1.1,1.3,1.55,2.0,3.0,5.0,7.0,10.0,12.5,15,20,25],  // red
-    Symbol2: [1.2,1.6,2.1,3.2,4.85,7.0,9.0,12.0,16.0,20.0,24.0,30.0], // green
-    Symbol1: [3.9,5.2,7.7,12.5,18.0,24.0,32.0,44.0,60.0,80.0,110.0,150.0] // blue
-  }
+    method: 'GET',
+    response: (req, res, ctx) => {
+        return res(
+            ctx.status(200),
+            ctx.json({
+                // === ОБНОВЛЕННЫЕ КОЭФФИЦИЕНТЫ ===
+
+                // Красное кольцо (Symbol3)
+                "Symbol3": [1.5, 2.0, 2.5, 3.0, 4.0, 6.0, 8.0, 11.0, 14.0, 17.0, 22.0, 28.0],
+
+                // Зеленое кольцо (Symbol2)
+                "Symbol2": [1.8, 2.5, 3.5, 4.5, 6.5, 9.0, 12.0, 16.0, 20.0, 27.0, 35.0, 50.0],
+
+                // Синее кольцо (Symbol1)
+                "Symbol1": [4.0, 5.5, 8.0, 12.0, 18.0, 25.0, 33.0, 45.0, 65.0, 85.0, 120.0, 200.0]
+            })
+        );
+    },
 },
 
 '/v2/api/games/settings': {
@@ -284,7 +295,29 @@ const MAX_STEP = 5;
 const SYMBOLS = ['Symbol1', 'Symbol2', 'Symbol3', 'SymbolNeutral', 'SymbolLoss'];
 
 function clamp(x, lo, hi) { return Math.min(Math.max(x, lo), hi); }
-function pickSymbol() { return SYMBOLS[(Math.random() * SYMBOLS.length) | 0]; }
+function pickSymbol() { 
+  // Взвешенный выбор символов для более реалистичной игры
+  const weights = {
+    'Symbol1': 0.20,    // 20% - синий
+    'Symbol2': 0.20,    // 20% - зеленый  
+    'Symbol3': 0.20,    // 20% - красный
+    'SymbolNeutral': 0.15, // 15% - нейтраль (пропуск хода)
+    'SymbolLoss': 0.25  // 25% - череп (проигрыш) - УВЕЛИЧИЛИ!
+  };
+  
+  const rand = Math.random();
+  let cumulative = 0;
+  
+  for (const [symbol, weight] of Object.entries(weights)) {
+    cumulative += weight;
+    if (rand <= cumulative) {
+      return symbol;
+    }
+  }
+  
+  // Fallback на случай ошибки
+  return 'SymbolNeutral';
+}
 
 let lastState = {
   initial: true,
@@ -302,9 +335,6 @@ let historySymbols = [];  // например: ['Symbol3','Symbol2',...]
 function applySymbol(prev, sym) {
   const col = prev.collection.slice();
 
-  // Флаг: нейтраль до старта — раунд не начался
-  const neutralBeforeStart = (sym === 'SymbolNeutral' && prev.initial === true);
-
   switch (sym) {
     case 'Symbol1': // BLUE -> индекс 2
       col[RINGS.blue]  = clamp(col[RINGS.blue]  + 1, 0, MAX_STEP);
@@ -316,8 +346,29 @@ function applySymbol(prev, sym) {
       col[RINGS.red]   = clamp(col[RINGS.red]   + 1, 0, MAX_STEP);
       break;
     case 'SymbolNeutral':
-      // ничего не меняем в колекции
-      break;
+      // Нейтраль: ничего не меняем в коллекции, но и не обнуляем игру
+      // Если игра уже началась (есть прогресс), то просто пропускаем ход
+      console.log('⚪ [MSW] SymbolNeutral: пропуск хода, коллекция остается:', prev.collection);
+      if (prev.initial && col.every(v => v === 0)) {
+        // Если игра еще не началась - остаемся в начальном состоянии
+        return {
+          initial: true,
+          collection: prev.collection.slice(),
+          bonusWin: 0,
+          superBonus: false,
+          symbol: 'SymbolNeutral',
+          cashable: false
+        };
+      }
+      // Если игра уже началась - просто пропускаем ход без изменений
+      return {
+        initial: false,
+        collection: prev.collection.slice(),
+        bonusWin: 0,
+        superBonus: false,
+        symbol: 'SymbolNeutral',
+        cashable: prev.cashable
+      };
     case 'SymbolLoss': // череп -> полный рестарт
       col[0] = col[1] = col[2] = 0;
       historySymbols = [];
@@ -326,24 +377,12 @@ function applySymbol(prev, sym) {
         collection: [0, 0, 0],
         bonusWin: 0,
         superBonus: false,
-        symbol: 'SymbolNeutral',
+        symbol: 'SymbolLoss', // показываем череп
         cashable: false
       };
   }
 
-  // Если нейтраль выпала до старта — старт "не начался"
-  if (neutralBeforeStart) {
-    return {
-      initial: true,
-      collection: prev.collection.slice(), // без изменений
-      bonusWin: 0,
-      superBonus: false,
-      symbol: 'SymbolNeutral',
-      cashable: false
-    };
-  }
-
-  // Иначе — обычная логика
+  // Для Symbol1, Symbol2, Symbol3 - обычная логика
   const hasProgress = col.some(v => v > 0);
   return {
     initial: !hasProgress ? prev.initial : false, // если пошёл прогресс — старта уже нет
@@ -398,16 +437,27 @@ self.addEventListener('fetch', (event) => {
 
         // крутим символ
         const sym = pickSymbol();
+        console.log('[MSW] Выпал символ:', sym, 'Текущее состояние:', lastState.collection);
+        
+        // Логируем поведение символов
+        if (sym === 'SymbolNeutral') {
+          console.log('⚪ [MSW] НЕЙТРАЛЬ - пропуск хода, игра продолжается');
+        } else if (sym === 'SymbolLoss') {
+          console.log('💀 [MSW] ЧЕРЕП - игра обнуляется!');
+        } else {
+          console.log('🎯 [MSW] ЦВЕТНОЙ СИМВОЛ - прогресс по кольцам');
+        }
 
         // ==== Если выпал ЧЕРЕП — мгновенный полный рестарт ====
         if (sym === 'SymbolLoss') {
+          console.log('💀 [MSW] ЧЕРЕП! Игра обнуляется! Предыдущее состояние:', lastState.collection);
           roundCounter += 1;
           lastState = {
             initial: true,
             collection: [0,0,0],
             bonusWin: 0,
             superBonus: false,
-            symbol: 'SymbolNeutral', // нейтральный стартовый
+            symbol: 'SymbolLoss', // показываем череп как символ
             cashable: false
           };
           historySymbols = [];
